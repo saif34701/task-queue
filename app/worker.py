@@ -77,7 +77,6 @@ def get_next_task(db: Session):
 
 def execute_task(task: Task):
     print(f"[Worker {WORKER_ID}] Executing task {task.id} of type '{task.type}'")
-    time.sleep(2)
     return {"message": f"Task {task.type} completed successfully"}
 
 def handle_success(db: Session, task: Task, result: dict):
