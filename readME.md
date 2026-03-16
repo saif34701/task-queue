@@ -179,4 +179,4 @@ understanding why it was necessary.
 
 Reguigui Mohamed saif — IT Student, ISET Rades, Tunisia  
 Building motorsport infrastructure and backend systems from scratch.  
-[LinkedIn] https://www.linkedin.com/in/saif-reguigui-5a6802341/| [GitHub] https://github.com/saif34701
+[LinkedIn] (https://www.linkedin.com/in/saif-reguigui-5a6802341/) | [GitHub] (https://github.com/saif34701)
