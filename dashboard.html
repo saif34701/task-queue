@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Queue Monitor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    #connection-status {
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: #1e1e2e;
+      color: #888;
+    }
+
+    #connection-status.connected {
+      background: #0d2e1a;
+      color: #2ecc71;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #2a2a3e;
+      text-align: center;
+    }
+
+    .stat-card .value {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-card.pending .value { color: #f39c12; }
+    .stat-card.running .value { color: #3498db; }
+    .stat-card.completed .value { color: #2ecc71; }
+    .stat-card.failed .value { color: #e74c3c; }
+    .stat-card.workers .value { color: #9b59b6; }
+    .stat-card.avg .value { color: #1abc9c; font-size: 28px; }
+
+    .section {
+      background: #1a1a2e;
+      border-radius: 12px;
+      border: 1px solid #2a2a3e;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #2a2a3e;
+      font-size: 14px;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #2ecc71;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 12px 20px;
+      text-align: left;
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+
+    td {
+      padding: 12px 20px;
+      font-size: 14px;
+      border-bottom: 1px solid #1e1e2e;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr.new-row {
+      animation: highlight 1s ease-out;
+    }
+
+    @keyframes highlight {
+      0% { background: #1e3a2e; }
+      100% { background: transparent; }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.PENDING { background: #2e2200; color: #f39c12; }
+    .badge.RUNNING { background: #001e3a; color: #3498db; }
+    .badge.COMPLETED { background: #0d2e1a; color: #2ecc71; }
+    .badge.FAILED { background: #2e0d0d; color: #e74c3c; }
+    .badge.ACTIVE { background: #1a0d2e; color: #9b59b6; }
+    .badge.DEAD { background: #2e0d0d; color: #e74c3c; }
+    .badge.STOPPED { background: #1e1e1e; color: #666; }
+
+    .event-log {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 12px 20px;
+    }
+
+    .event-item {
+      font-size: 13px;
+      padding: 6px 0;
+      border-bottom: 1px solid #1e1e2e;
+      color: #888;
+      display: flex;
+      gap: 12px;
+    }
+
+    .event-item:last-child { border-bottom: none; }
+    .event-item .time { color: #555; min-width: 80px; }
+    .event-item .event-type { color: #3498db; min-width: 140px; }
+    .event-item.task_completed .event-type { color: #2ecc71; }
+    .event-item.task_failed .event-type { color: #e74c3c; }
+    .event-item.task_created .event-type { color: #f39c12; }
+
+    .empty-state {
+      padding: 32px 20px;
+      text-align: center;
+      color: #444;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Task Queue Monitor</h1>
+  <div id="connection-status">Connecting...</div>
+</header>
+
+<div class="stats-grid">
+  <div class="stat-card pending">
+    <div class="value" id="stat-pending">0</div>
+    <div class="label">Pending</div>
+  </div>
+  <div class="stat-card running">
+    <div class="value" id="stat-running">0</div>
+    <div class="label">Running</div>
+  </div>
+  <div class="stat-card completed">
+    <div class="value" id="stat-completed">0</div>
+    <div class="label">Completed</div>
+  </div>
+  <div class="stat-card failed">
+    <div class="value" id="stat-failed">0</div>
+    <div class="label">Failed</div>
+  </div>
+  <div class="stat-card workers">
+    <div class="value" id="stat-workers">0</div>
+    <div class="label">Workers</div>
+  </div>
+  <div class="stat-card avg">
+    <div class="value" id="stat-avg">0s</div>
+    <div class="label">Avg Execution</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <span>Live Event Log</span>
+    <div class="live-dot"></div>
+  </div>
+  <div class="event-log" id="event-log">
+    <div class="empty-state">Waiting for events...</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">Tasks</div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Retries</th>
+        <th>Created</th>
+        <th>Duration</th>
+      </tr>
+    </thead>
+    <tbody id="tasks-table"></tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-header">Workers</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Worker ID</th>
+        <th>Status</th>
+        <th>Current Task</th>
+        <th>Completed</th>
+        <th>Last Heartbeat</th>
+      </tr>
+    </thead>
+    <tbody id="workers-table"></tbody>
+  </table>
+</div>
+
+<script>
+  const API = "http://127.0.0.1:8000";
+  const WS = "ws://127.0.0.1:8000/ws";
+
+  async function fetchStats() {
+    const res = await fetch(`${API}/stats`);
+    const data = await res.json();
+    document.getElementById("stat-pending").textContent = data.pending;
+    document.getElementById("stat-running").textContent = data.running;
+    document.getElementById("stat-completed").textContent = data.completed;
+    document.getElementById("stat-failed").textContent = data.failed;
+    document.getElementById("stat-workers").textContent = data.active_workers;
+    document.getElementById("stat-avg").textContent = data.avg_execution_seconds + "s";
+  }
+
+  async function fetchTasks() {
+    const res = await fetch(`${API}/tasks`);
+    const tasks = await res.json();
+    const tbody = document.getElementById("tasks-table");
+
+    if (tasks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No tasks yet</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = tasks.reverse().map(t => {
+      const duration = t.started_at && t.completed_at
+        ? ((new Date(t.completed_at) - new Date(t.started_at)) / 1000).toFixed(2) + "s"
+        : t.started_at ? "Running..." : "-";
+
+      const created = new Date(t.created_at).toLocaleTimeString();
+
+      return `<tr>
+        <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
+        <td>${t.type}</td>
+        <td><span class="badge ${t.status}">${t.status}</span></td>
+        <td>${t.priority}</td>
+        <td>${t.retry_count}/${t.max_retries}</td>
+        <td>${created}</td>
+        <td>${duration}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  async function fetchWorkers() {
+    const res = await fetch(`${API}/workers`);
+    const workers = await res.json();
+    const tbody = document.getElementById("workers-table");
+
+    if (workers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No workers registered</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = workers.map(w => {
+      const heartbeat = new Date(w.last_heartbeat).toLocaleTimeString();
+      return `<tr>
+        <td style="font-family:monospace">${w.id}</td>
+        <td><span class="badge ${w.status}">${w.status}</span></td>
+        <td style="font-family:monospace;font-size:12px;color:#555">${w.current_task_id ? w.current_task_id.substring(0, 8) + "..." : "-"}</td>
+        <td>${w.tasks_completed}</td>
+        <td>${heartbeat}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function addEventLog(event) {
+    const log = document.getElementById("event-log");
+    const empty = log.querySelector(".empty-state");
+    if (empty) empty.remove();
+
+    const time = new Date().toLocaleTimeString();
+    const item = document.createElement("div");
+    item.className = `event-item ${event.event}`;
+    item.innerHTML = `
+      <span class="time">${time}</span>
+      <span class="event-type">${event.event}</span>
+      <span>${event.type || ""} ${event.task_id ? "— " + event.task_id.substring(0, 8) + "..." : ""}</span>
+    `;
+    log.insertBefore(item, log.firstChild);
+  }
+
+  function connectWebSocket() {
+    const ws = new WebSocket(WS);
+    const status = document.getElementById("connection-status");
+
+    ws.onopen = () => {
+      status.textContent = "Live";
+      status.classList.add("connected");
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      addEventLog(data);
+      fetchStats();
+      fetchTasks();
+      fetchWorkers();
+    };
+
+    ws.onclose = () => {
+      status.textContent = "Disconnected";
+      status.classList.remove("connected");
+      setTimeout(connectWebSocket, 3000);
+    };
+  }
+
+  fetchStats();
+  fetchTasks();
+  fetchWorkers();
+  connectWebSocket();
+  setInterval(() => { fetchStats(); fetchWorkers(); }, 5000);
+</script>
+
+</body>
+</html>

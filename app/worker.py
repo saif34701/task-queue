@@ -5,6 +5,20 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Task, Worker
 
+def notify(event_type: str, task: Task):
+    try:
+        import httpx
+        httpx.post("http://127.0.0.1:8000/internal/broadcast", json={
+            "event": event_type,
+            "task_id": task.id,
+            "type": task.type,
+            "status": task.status,
+            "retry_count": task.retry_count,
+            "error_message": task.error_message
+        }, timeout=1)
+    except Exception:
+        pass
+
 WORKER_ID = str(uuid.uuid4())[:8]
 HEARTBEAT_INTERVAL = 5
 DEAD_WORKER_THRESHOLD = 15
@@ -78,6 +92,7 @@ def handle_success(db: Session, task: Task, result: dict):
 
     db.commit()
     print(f"[Worker {WORKER_ID}] Task {task.id} COMPLETED")
+    notify("task_completed", task)
 
 def handle_failure(db: Session, task: Task, error: str):
     task.retry_count += 1
@@ -92,6 +107,7 @@ def handle_failure(db: Session, task: Task, error: str):
         print(f"[Worker {WORKER_ID}] Task {task.id} failed — retrying ({task.retry_count}/{task.max_retries})")
 
     db.commit()
+    notify("task_failed", task)
 
 def run_worker():
     print(f"[Worker {WORKER_ID}] Started and polling for tasks...")
