@@ -295,6 +295,87 @@
       border-color: #444;
       color: #ffffff;
     }
+
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .toast {
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateX(40px);
+      transition: all 0.3s ease;
+      min-width: 260px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toast.task_completed {
+      background: #0d2e1a;
+      color: #2ecc71;
+      border: 1px solid #2ecc71;
+    }
+
+    .toast.task_failed {
+      background: #2e0d0d;
+      color: #e74c3c;
+      border: 1px solid #e74c3c;
+    }
+
+    .toast.task_created {
+      background: #2e2200;
+      color: #f39c12;
+      border: 1px solid #f39c12;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid #2a2a3e;
+      font-size: 14px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-top: 2px;
+    }
+
+    .detail-value {
+      color: #e0e0e0;
+      word-break: break-all;
+    }
+
+    .detail-json {
+      background: #0f0f1a;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #2ecc71;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
 </head>
 
@@ -409,7 +490,7 @@
     background:#0f0f1a;border:1px solid #2a2a3e;color:#e0e0e0;
     padding:4px 12px;border-radius:6px;font-size:13px;width:220px;
   " />
- 
+
         <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn active-filter">All</button>
         <button onclick="setFilter('PENDING')" id="filter-PENDING" class="filter-btn">Pending</button>
         <button onclick="setFilter('RUNNING')" id="filter-RUNNING" class="filter-btn">Running</button>
@@ -565,7 +646,7 @@
     ">Cancel</button>`
           : '';
 
-        return `<tr>
+        return `<tr onclick="openModal(${JSON.stringify(t).replace(/"/g, '&quot;')})" style="cursor:pointer;" onmouseover="this.style.background='#1e1e2e'" onmouseout="this.style.background='transparent'">
   <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
   <td>${t.type}</td>
   <td><span class="badge ${t.status}">${t.status}</span></td>
@@ -634,6 +715,7 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         addEventLog(data);
+        showToast(data);
         fetchStats();
         fetchTasks();
         fetchWorkers();
@@ -716,20 +798,130 @@
       }
     }
     async function cancelTask(taskId) {
-  try {
-    const res = await fetch(`${API}/tasks/${taskId}/cancel`, {
-      method: "POST"
-    });
-    if (res.ok) {
-      await fetchTasks();
-      await fetchStats();
+      try {
+        const res = await fetch(`${API}/tasks/${taskId}/cancel`, {
+          method: "POST"
+        });
+        if (res.ok) {
+          await fetchTasks();
+          await fetchStats();
+        }
+      } catch (e) {
+        console.error("Cancel failed", e);
+      }
     }
-  } catch (e) {
-    console.error("Cancel failed", e);
-  }
-}
-  </script>
+    function showToast(event) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `toast ${event.event}`;
 
+      const messages = {
+        task_created: `Task created — ${event.type}`,
+        task_completed: `Completed — ${event.type}`,
+        task_failed: `Failed — ${event.type}`
+      };
+
+      toast.textContent = messages[event.event] || event.event;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.classList.add("show"), 10);
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+    function openModal(task) {
+      const content = document.getElementById("modal-content");
+
+      const formatJson = (obj) => obj
+        ? `<div class="detail-json">${JSON.stringify(obj, null, 2)}</div>`
+        : '<span style="color:#555">—</span>';
+
+      const formatDate = (d) => d ? new Date(d).toLocaleString() : '—';
+
+      const duration = task.started_at && task.completed_at
+        ? ((new Date(task.completed_at) - new Date(task.started_at)) / 1000).toFixed(2) + "s"
+        : '—';
+
+      content.innerHTML = `
+    <div class="detail-row">
+      <div class="detail-label">Task ID</div>
+      <div class="detail-value" style="font-family:monospace;font-size:12px;">${task.id}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Type</div>
+      <div class="detail-value">${task.type}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Status</div>
+      <div class="detail-value"><span class="badge ${task.status}">${task.status}</span></div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Priority</div>
+      <div class="detail-value">${task.priority}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Retries</div>
+      <div class="detail-value">${task.retry_count} / ${task.max_retries}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Created</div>
+      <div class="detail-value">${formatDate(task.created_at)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Started</div>
+      <div class="detail-value">${formatDate(task.started_at)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Completed</div>
+      <div class="detail-value">${formatDate(task.completed_at)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Duration</div>
+      <div class="detail-value">${duration}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Payload</div>
+      <div class="detail-value">${formatJson(task.payload)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Result</div>
+      <div class="detail-value">${formatJson(task.result)}</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Error</div>
+      <div class="detail-value" style="color:#e74c3c">${task.error_message || '—'}</div>
+    </div>
+  `;
+
+      const overlay = document.getElementById("modal-overlay");
+      overlay.style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("modal-overlay").style.display = "none";
+    }
+  </script>
+  <div id="toast-container"></div>
+  <div id="modal-overlay" onclick="closeModal()" style="
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.7);z-index:2000;
+  align-items:center;justify-content:center;
+">
+    <div onclick="event.stopPropagation()" style="
+    background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;
+    padding:28px;width:560px;max-height:80vh;overflow-y:auto;
+  ">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h3 style="font-size:16px;color:#fff;">Task Details</h3>
+        <button onclick="closeModal()" style="
+        background:transparent;border:none;color:#888;
+        font-size:20px;cursor:pointer;
+      ">✕</button>
+      </div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
 </body>
 
 </html>
