@@ -1,6 +1,6 @@
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Task, Worker
@@ -32,12 +32,12 @@ def register_worker(db: Session):
 def send_heartbeat(db: Session, current_task_id=None):
     worker = db.query(Worker).filter(Worker.id == WORKER_ID).first()
     if worker:
-        worker.last_heartbeat = datetime.utcnow()
+        worker.last_heartbeat = datetime.now(timezone.utc)
         worker.current_task_id = current_task_id
         db.commit()
 
 def recover_dead_workers(db: Session):
-    threshold = datetime.utcnow() - timedelta(seconds=DEAD_WORKER_THRESHOLD)
+    threshold = datetime.now(timezone.utc) - timedelta(seconds=DEAD_WORKER_THRESHOLD)
     
     dead_workers = db.query(Worker).filter(
         Worker.status == "ACTIVE",
@@ -69,19 +69,20 @@ def get_next_task(db: Session):
 
     if task:
         task.status = "RUNNING"
-        task.started_at = datetime.utcnow()
+        task.started_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(task)
 
     return task
 
 def execute_task(task: Task):
+    from app.handlers import execute_registered_task
     print(f"[Worker {WORKER_ID}] Executing task {task.id} of type '{task.type}'")
-    return {"message": f"Task {task.type} completed successfully"}
+    return execute_registered_task(task.type, task.payload or {})
 
 def handle_success(db: Session, task: Task, result: dict):
     task.status = "COMPLETED"
-    task.completed_at = datetime.utcnow()
+    task.completed_at = datetime.now(timezone.utc)
     task.result = result
 
     worker = db.query(Worker).filter(Worker.id == WORKER_ID).first()

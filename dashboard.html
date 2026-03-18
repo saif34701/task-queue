@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Task Queue Monitor</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -69,12 +74,30 @@
       letter-spacing: 0.5px;
     }
 
-    .stat-card.pending .value { color: #f39c12; }
-    .stat-card.running .value { color: #3498db; }
-    .stat-card.completed .value { color: #2ecc71; }
-    .stat-card.failed .value { color: #e74c3c; }
-    .stat-card.workers .value { color: #9b59b6; }
-    .stat-card.avg .value { color: #1abc9c; font-size: 28px; }
+    .stat-card.pending .value {
+      color: #f39c12;
+    }
+
+    .stat-card.running .value {
+      color: #3498db;
+    }
+
+    .stat-card.completed .value {
+      color: #2ecc71;
+    }
+
+    .stat-card.failed .value {
+      color: #e74c3c;
+    }
+
+    .stat-card.workers .value {
+      color: #9b59b6;
+    }
+
+    .stat-card.avg .value {
+      color: #1abc9c;
+      font-size: 28px;
+    }
 
     .section {
       background: #1a1a2e;
@@ -106,8 +129,15 @@
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
     }
 
     table {
@@ -131,15 +161,22 @@
       border-bottom: 1px solid #1e1e2e;
     }
 
-    tr:last-child td { border-bottom: none; }
+    tr:last-child td {
+      border-bottom: none;
+    }
 
     tr.new-row {
       animation: highlight 1s ease-out;
     }
 
     @keyframes highlight {
-      0% { background: #1e3a2e; }
-      100% { background: transparent; }
+      0% {
+        background: #1e3a2e;
+      }
+
+      100% {
+        background: transparent;
+      }
     }
 
     .badge {
@@ -150,13 +187,40 @@
       font-weight: 600;
     }
 
-    .badge.PENDING { background: #2e2200; color: #f39c12; }
-    .badge.RUNNING { background: #001e3a; color: #3498db; }
-    .badge.COMPLETED { background: #0d2e1a; color: #2ecc71; }
-    .badge.FAILED { background: #2e0d0d; color: #e74c3c; }
-    .badge.ACTIVE { background: #1a0d2e; color: #9b59b6; }
-    .badge.DEAD { background: #2e0d0d; color: #e74c3c; }
-    .badge.STOPPED { background: #1e1e1e; color: #666; }
+    .badge.PENDING {
+      background: #2e2200;
+      color: #f39c12;
+    }
+
+    .badge.RUNNING {
+      background: #001e3a;
+      color: #3498db;
+    }
+
+    .badge.COMPLETED {
+      background: #0d2e1a;
+      color: #2ecc71;
+    }
+
+    .badge.FAILED {
+      background: #2e0d0d;
+      color: #e74c3c;
+    }
+
+    .badge.ACTIVE {
+      background: #1a0d2e;
+      color: #9b59b6;
+    }
+
+    .badge.DEAD {
+      background: #2e0d0d;
+      color: #e74c3c;
+    }
+
+    .badge.STOPPED {
+      background: #1e1e1e;
+      color: #666;
+    }
 
     .event-log {
       max-height: 200px;
@@ -173,12 +237,31 @@
       gap: 12px;
     }
 
-    .event-item:last-child { border-bottom: none; }
-    .event-item .time { color: #555; min-width: 80px; }
-    .event-item .event-type { color: #3498db; min-width: 140px; }
-    .event-item.task_completed .event-type { color: #2ecc71; }
-    .event-item.task_failed .event-type { color: #e74c3c; }
-    .event-item.task_created .event-type { color: #f39c12; }
+    .event-item:last-child {
+      border-bottom: none;
+    }
+
+    .event-item .time {
+      color: #555;
+      min-width: 80px;
+    }
+
+    .event-item .event-type {
+      color: #3498db;
+      min-width: 140px;
+    }
+
+    .event-item.task_completed .event-type {
+      color: #2ecc71;
+    }
+
+    .event-item.task_failed .event-type {
+      color: #e74c3c;
+    }
+
+    .event-item.task_created .event-type {
+      color: #f39c12;
+    }
 
     .empty-state {
       padding: 32px 20px;
@@ -186,198 +269,427 @@
       color: #444;
       font-size: 14px;
     }
+
+    .filter-btn {
+      background: #0f0f1a;
+      border: 1px solid #2a2a3e;
+      color: #888;
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .filter-btn:hover {
+      border-color: #444;
+      color: #ccc;
+    }
+
+    .active-filter {
+      background: #1a1a2e;
+      border-color: #444;
+      color: #ffffff;
+    }
   </style>
 </head>
+
 <body>
 
-<header>
-  <h1>Task Queue Monitor</h1>
-  <div id="connection-status">Connecting...</div>
-</header>
+  <header>
+    <h1>Task Queue Monitor</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="toggleForm()" style="
+      background:#1a1a2e;
+      border:1px solid #2a2a3e;
+      color:#e0e0e0;
+      padding:8px 18px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:14px;
+    ">+ New Task</button>
+      <div id="connection-status">Connecting...</div>
+    </div>
+  </header>
 
-<div class="stats-grid">
-  <div class="stat-card pending">
-    <div class="value" id="stat-pending">0</div>
-    <div class="label">Pending</div>
+  <!-- Submit Task Form -->
+  <div id="task-form"
+    style="display:none;background:#1a1a2e;border:1px solid #2a2a3e;border-radius:12px;padding:24px;margin-bottom:24px;">
+    <h3 style="margin-bottom:16px;font-size:15px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px;">New Task
+    </h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <label style="font-size:12px;color:#666;display:block;margin-bottom:6px;">TYPE</label>
+        <input id="input-type" placeholder="send_email" style="
+        width:100%;background:#0f0f1a;border:1px solid #2a2a3e;
+        color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:14px;
+      " />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#666;display:block;margin-bottom:6px;">PRIORITY (1-10)</label>
+        <input id="input-priority" type="number" min="1" max="10" value="5" style="
+        width:100%;background:#0f0f1a;border:1px solid #2a2a3e;
+        color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:14px;
+      " />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#666;display:block;margin-bottom:6px;">MAX RETRIES</label>
+        <input id="input-retries" type="number" min="0" max="10" value="3" style="
+        width:100%;background:#0f0f1a;border:1px solid #2a2a3e;
+        color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:14px;
+      " />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#666;display:block;margin-bottom:6px;">PAYLOAD (JSON)</label>
+        <input id="input-payload" placeholder='{"key":"value"}' style="
+        width:100%;background:#0f0f1a;border:1px solid #2a2a3e;
+        color:#e0e0e0;padding:8px 12px;border-radius:8px;font-size:14px;
+      " />
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="submitTask()" style="
+      background:#2ecc71;border:none;color:#0f0f1a;
+      padding:8px 20px;border-radius:8px;cursor:pointer;
+      font-size:14px;font-weight:600;
+    ">Submit</button>
+      <button onclick="toggleForm()" style="
+      background:transparent;border:1px solid #2a2a3e;color:#888;
+      padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;
+    ">Cancel</button>
+      <span id="submit-feedback" style="font-size:13px;color:#666;line-height:2.2;"></span>
+    </div>
   </div>
-  <div class="stat-card running">
-    <div class="value" id="stat-running">0</div>
-    <div class="label">Running</div>
+  <div class="stats-grid">
+    <div class="stat-card pending">
+      <div class="value" id="stat-pending">0</div>
+      <div class="label">Pending</div>
+    </div>
+    <div class="stat-card running">
+      <div class="value" id="stat-running">0</div>
+      <div class="label">Running</div>
+    </div>
+    <div class="stat-card completed">
+      <div class="value" id="stat-completed">0</div>
+      <div class="label">Completed</div>
+    </div>
+    <div class="stat-card failed">
+      <div class="value" id="stat-failed">0</div>
+      <div class="label">Failed</div>
+    </div>
+    <div class="stat-card workers">
+      <div class="value" id="stat-workers">0</div>
+      <div class="label">Workers</div>
+    </div>
+    <div class="stat-card avg">
+      <div class="value" id="stat-avg">0s</div>
+      <div class="label">Avg Execution</div>
+    </div>
   </div>
-  <div class="stat-card completed">
-    <div class="value" id="stat-completed">0</div>
-    <div class="label">Completed</div>
-  </div>
-  <div class="stat-card failed">
-    <div class="value" id="stat-failed">0</div>
-    <div class="label">Failed</div>
-  </div>
-  <div class="stat-card workers">
-    <div class="value" id="stat-workers">0</div>
-    <div class="label">Workers</div>
-  </div>
-  <div class="stat-card avg">
-    <div class="value" id="stat-avg">0s</div>
-    <div class="label">Avg Execution</div>
-  </div>
-</div>
 
-<div class="section">
-  <div class="section-header">
-    <span>Live Event Log</span>
-    <div class="live-dot"></div>
+  <div class="section">
+    <div class="section-header">
+      <span>Live Event Log</span>
+      <div class="live-dot"></div>
+    </div>
+    <div class="event-log" id="event-log">
+      <div class="empty-state">Waiting for events...</div>
+    </div>
   </div>
-  <div class="event-log" id="event-log">
-    <div class="empty-state">Waiting for events...</div>
+
+  <div class="section">
+    <div class="section-header">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="margin-right:8px;">Tasks</span>
+        <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn active-filter">All</button>
+        <button onclick="setFilter('PENDING')" id="filter-PENDING" class="filter-btn">Pending</button>
+        <button onclick="setFilter('RUNNING')" id="filter-RUNNING" class="filter-btn">Running</button>
+        <button onclick="setFilter('COMPLETED')" id="filter-COMPLETED" class="filter-btn">Completed</button>
+        <button onclick="setFilter('FAILED')" id="filter-FAILED" class="filter-btn">Failed</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="changePage(-1)" id="btn-prev" style="
+        background:#0f0f1a;border:1px solid #2a2a3e;color:#888;
+        padding:4px 12px;border-radius:6px;cursor:pointer;font-size:13px;
+      ">← Prev</button>
+        <span id="page-indicator" style="font-size:13px;color:#555;">Page 1</span>
+        <button onclick="changePage(1)" id="btn-next" style="
+        background:#0f0f1a;border:1px solid #2a2a3e;color:#888;
+        padding:4px 12px;border-radius:6px;cursor:pointer;font-size:13px;
+      ">Next →</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Retries</th>
+          <th>Created</th>
+          <th>Duration</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tasks-table"></tbody>
+    </table>
   </div>
-</div>
 
-<div class="section">
-  <div class="section-header">Tasks</div>
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Type</th>
-        <th>Status</th>
-        <th>Priority</th>
-        <th>Retries</th>
-        <th>Created</th>
-        <th>Duration</th>
-      </tr>
-    </thead>
-    <tbody id="tasks-table"></tbody>
-  </table>
-</div>
+  <div class="section">
+    <div class="section-header">Workers</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Worker ID</th>
+          <th>Status</th>
+          <th>Current Task</th>
+          <th>Completed</th>
+          <th>Last Heartbeat</th>
+        </tr>
+      </thead>
+      <tbody id="workers-table"></tbody>
+    </table>
+  </div>
 
-<div class="section">
-  <div class="section-header">Workers</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Worker ID</th>
-        <th>Status</th>
-        <th>Current Task</th>
-        <th>Completed</th>
-        <th>Last Heartbeat</th>
-      </tr>
-    </thead>
-    <tbody id="workers-table"></tbody>
-  </table>
-</div>
-
-<script>
-  const API = "http://127.0.0.1:8000";
-  const WS = "ws://127.0.0.1:8000/ws";
-
-  async function fetchStats() {
-    const res = await fetch(`${API}/stats`);
-    const data = await res.json();
-    document.getElementById("stat-pending").textContent = data.pending;
-    document.getElementById("stat-running").textContent = data.running;
-    document.getElementById("stat-completed").textContent = data.completed;
-    document.getElementById("stat-failed").textContent = data.failed;
-    document.getElementById("stat-workers").textContent = data.active_workers;
-    document.getElementById("stat-avg").textContent = data.avg_execution_seconds + "s";
-  }
-
-  async function fetchTasks() {
-    const res = await fetch(`${API}/tasks`);
-    const tasks = await res.json();
-    const tbody = document.getElementById("tasks-table");
-
-    if (tasks.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No tasks yet</td></tr>';
-      return;
+  <script>
+    const API = "http://127.0.0.1:8000";
+    const WS = "ws://127.0.0.1:8000/ws";
+    async function retryTask(taskId) {
+      try {
+        const res = await fetch(`${API}/tasks/${taskId}/retry`, {
+          method: "POST"
+        });
+        if (res.ok) {
+          await fetchTasks();
+          await fetchStats();
+        }
+      } catch (e) {
+        console.error("Retry failed", e);
+      }
     }
 
-    tbody.innerHTML = tasks.reverse().map(t => {
-      const duration = t.started_at && t.completed_at
-        ? ((new Date(t.completed_at) - new Date(t.started_at)) / 1000).toFixed(2) + "s"
-        : t.started_at ? "Running..." : "-";
+    async function fetchStats() {
+      const res = await fetch(`${API}/stats`);
+      const data = await res.json();
+      document.getElementById("stat-pending").textContent = data.pending;
+      document.getElementById("stat-running").textContent = data.running;
+      document.getElementById("stat-completed").textContent = data.completed;
+      document.getElementById("stat-failed").textContent = data.failed;
+      document.getElementById("stat-workers").textContent = data.active_workers;
+      document.getElementById("stat-avg").textContent = data.avg_execution_seconds + "s";
+    }
+    let currentPage = 1;
+    let currentFilter = 'ALL';
+    const PAGE_SIZE = 20;
+    let allTasks = [];
+    function setFilter(filter) {
+      currentFilter = filter;
+      currentPage = 1;
 
-      const created = new Date(t.created_at).toLocaleTimeString();
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active-filter');
+      });
+      document.getElementById(`filter-${filter}`).classList.add('active-filter');
 
-      return `<tr>
-        <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
-        <td>${t.type}</td>
-        <td><span class="badge ${t.status}">${t.status}</span></td>
-        <td>${t.priority}</td>
-        <td>${t.retry_count}/${t.max_retries}</td>
-        <td>${created}</td>
-        <td>${duration}</td>
-      </tr>`;
-    }).join("");
-  }
-
-  async function fetchWorkers() {
-    const res = await fetch(`${API}/workers`);
-    const workers = await res.json();
-    const tbody = document.getElementById("workers-table");
-
-    if (workers.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No workers registered</td></tr>';
-      return;
+      renderTasksPage();
     }
 
-    tbody.innerHTML = workers.map(w => {
-      const heartbeat = new Date(w.last_heartbeat).toLocaleTimeString();
-      return `<tr>
+    async function fetchTasks() {
+      const res = await fetch(`${API}/tasks`);
+      allTasks = await res.json();
+      allTasks.reverse();
+      renderTasksPage();
+    }
+
+    function renderTasksPage() {
+      const tbody = document.getElementById("tasks-table");
+      const filtered = currentFilter === 'ALL'
+        ? allTasks
+        : allTasks.filter(t => t.status === currentFilter);
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageTasks = filtered.slice(start, end);
+
+      document.getElementById("page-indicator").textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById("btn-prev").disabled = currentPage === 1;
+      document.getElementById("btn-next").disabled = currentPage === totalPages;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No tasks yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = pageTasks.map(t => {
+        const duration = t.started_at && t.completed_at
+          ? ((new Date(t.completed_at) - new Date(t.started_at)) / 1000).toFixed(2) + "s"
+          : t.started_at ? "Running..." : "-";
+
+        const created = new Date(t.created_at).toLocaleTimeString();
+
+        const retryBtn = t.status === 'FAILED'
+          ? `<button onclick="retryTask('${t.id}')" style="
+        background:transparent;border:1px solid #e74c3c;color:#e74c3c;
+        padding:3px 10px;border-radius:6px;cursor:pointer;font-size:12px;
+      ">Retry</button>`
+          : '';
+
+        return `<tr>
+    <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
+    <td>${t.type}</td>
+    <td><span class="badge ${t.status}">${t.status}</span></td>
+    <td>${t.priority}</td>
+    <td>${t.retry_count}/${t.max_retries}</td>
+    <td>${created}</td>
+    <td>${duration}</td>
+    <td>${retryBtn}</td>
+  </tr>`;
+      }).join("");
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil(allTasks.length / PAGE_SIZE);
+      currentPage = Math.max(1, Math.min(totalPages, currentPage + direction));
+      renderTasksPage();
+    }
+
+    async function fetchWorkers() {
+      const res = await fetch(`${API}/workers`);
+      const workers = await res.json();
+      const tbody = document.getElementById("workers-table");
+
+      if (workers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No workers registered</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = workers.map(w => {
+        const heartbeat = new Date(w.last_heartbeat).toLocaleTimeString();
+        return `<tr>
         <td style="font-family:monospace">${w.id}</td>
         <td><span class="badge ${w.status}">${w.status}</span></td>
         <td style="font-family:monospace;font-size:12px;color:#555">${w.current_task_id ? w.current_task_id.substring(0, 8) + "..." : "-"}</td>
         <td>${w.tasks_completed}</td>
         <td>${heartbeat}</td>
       </tr>`;
-    }).join("");
-  }
+      }).join("");
+    }
 
-  function addEventLog(event) {
-    const log = document.getElementById("event-log");
-    const empty = log.querySelector(".empty-state");
-    if (empty) empty.remove();
+    function addEventLog(event) {
+      const log = document.getElementById("event-log");
+      const empty = log.querySelector(".empty-state");
+      if (empty) empty.remove();
 
-    const time = new Date().toLocaleTimeString();
-    const item = document.createElement("div");
-    item.className = `event-item ${event.event}`;
-    item.innerHTML = `
+      const time = new Date().toLocaleTimeString();
+      const item = document.createElement("div");
+      item.className = `event-item ${event.event}`;
+      item.innerHTML = `
       <span class="time">${time}</span>
       <span class="event-type">${event.event}</span>
       <span>${event.type || ""} ${event.task_id ? "— " + event.task_id.substring(0, 8) + "..." : ""}</span>
     `;
-    log.insertBefore(item, log.firstChild);
-  }
+      log.insertBefore(item, log.firstChild);
+    }
 
-  function connectWebSocket() {
-    const ws = new WebSocket(WS);
-    const status = document.getElementById("connection-status");
+    function connectWebSocket() {
+      const ws = new WebSocket(WS);
+      const status = document.getElementById("connection-status");
 
-    ws.onopen = () => {
-      status.textContent = "Live";
-      status.classList.add("connected");
-    };
+      ws.onopen = () => {
+        status.textContent = "Live";
+        status.classList.add("connected");
+      };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      addEventLog(data);
-      fetchStats();
-      fetchTasks();
-      fetchWorkers();
-    };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        addEventLog(data);
+        fetchStats();
+        fetchTasks();
+        fetchWorkers();
+      };
 
-    ws.onclose = () => {
-      status.textContent = "Disconnected";
-      status.classList.remove("connected");
-      setTimeout(connectWebSocket, 3000);
-    };
-  }
+      ws.onclose = () => {
+        status.textContent = "Disconnected";
+        status.classList.remove("connected");
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
 
-  fetchStats();
-  fetchTasks();
-  fetchWorkers();
-  connectWebSocket();
-  setInterval(() => { fetchStats(); fetchWorkers(); }, 5000);
-</script>
+    fetchStats();
+    fetchTasks();
+    fetchWorkers();
+    connectWebSocket();
+    setInterval(() => { fetchStats(); fetchWorkers(); }, 5000);
+    async function toggleForm() {
+      const form = document.getElementById("task-form");
+      const isHidden = form.style.display === "none";
+      form.style.display = isHidden ? "block" : "none";
+
+      if (isHidden) {
+        try {
+          const res = await fetch(`${API}/registry`);
+          const data = await res.json();
+          const input = document.getElementById("input-type");
+          input.placeholder = data.registered_types.join(", ");
+        } catch { }
+      }
+    }
+
+    async function submitTask() {
+      const type = document.getElementById("input-type").value.trim();
+      const priority = parseInt(document.getElementById("input-priority").value);
+      const maxRetries = parseInt(document.getElementById("input-retries").value);
+      const payloadRaw = document.getElementById("input-payload").value.trim();
+      const feedback = document.getElementById("submit-feedback");
+
+      if (!type) {
+        feedback.style.color = "#e74c3c";
+        feedback.textContent = "Task type is required.";
+        return;
+      }
+
+      let payload = null;
+      if (payloadRaw) {
+        try {
+          payload = JSON.parse(payloadRaw);
+        } catch {
+          feedback.style.color = "#e74c3c";
+          feedback.textContent = "Invalid JSON payload.";
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch(`${API}/tasks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, payload, priority, max_retries: maxRetries })
+        });
+
+        if (res.ok) {
+          feedback.style.color = "#2ecc71";
+          feedback.textContent = "Task submitted successfully.";
+          document.getElementById("input-type").value = "";
+          document.getElementById("input-payload").value = "";
+          setTimeout(() => {
+            feedback.textContent = "";
+            toggleForm();
+          }, 1500);
+        } else {
+          feedback.style.color = "#e74c3c";
+          feedback.textContent = "Submission failed.";
+        }
+      } catch (e) {
+        feedback.style.color = "#e74c3c";
+        feedback.textContent = "Server error.";
+      }
+    }
+  </script>
 
 </body>
+
 </html>

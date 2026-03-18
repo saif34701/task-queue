@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -128,3 +128,25 @@ def get_stats(db: Session = Depends(get_db)):
 async def internal_broadcast(event: dict):
     await manager.broadcast(event)
     return {"ok": True}
+
+@app.post("/tasks/{task_id}/retry")
+def retry_task(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.status != "FAILED":
+        raise HTTPException(status_code=400, detail="Only FAILED tasks can be retried")
+    
+    task.status = "PENDING"
+    task.retry_count = 0
+    task.error_message = None
+    task.started_at = None
+    task.completed_at = None
+    db.commit()
+    db.refresh(task)
+    return {"message": "Task requeued", "task_id": task.id}
+
+@app.get("/registry")
+def get_registry():
+    from app.handlers import TASK_REGISTRY
+    return {"registered_types": list(TASK_REGISTRY.keys())}
