@@ -102,6 +102,7 @@ def get_workers(db: Session = Depends(get_db)):
 def get_stats(db: Session = Depends(get_db)):
     from sqlalchemy import func
 
+    total_cancelled = db.query(Task).filter(Task.status == "CANCELLED").count()
     total_pending = db.query(Task).filter(Task.status == "PENDING").count()
     total_running = db.query(Task).filter(Task.status == "RUNNING").count()
     total_completed = db.query(Task).filter(Task.status == "COMPLETED").count()
@@ -116,13 +117,14 @@ def get_stats(db: Session = Depends(get_db)):
     ).filter(Task.status == "COMPLETED").scalar()
 
     return {
-        "pending": total_pending,
-        "running": total_running,
-        "completed": total_completed,
-        "failed": total_failed,
-        "active_workers": active_workers,
-        "avg_execution_seconds": round(avg_duration or 0, 2)
-    }
+    "pending": total_pending,
+    "running": total_running,
+    "completed": total_completed,
+    "failed": total_failed,
+    "cancelled": total_cancelled,
+    "active_workers": active_workers,
+    "avg_execution_seconds": round(avg_duration or 0, 2)
+}
 
 @app.post("/internal/broadcast")
 async def internal_broadcast(event: dict):
@@ -150,3 +152,16 @@ def retry_task(task_id: str, db: Session = Depends(get_db)):
 def get_registry():
     from app.handlers import TASK_REGISTRY
     return {"registered_types": list(TASK_REGISTRY.keys())}
+
+@app.post("/tasks/{task_id}/cancel")
+def cancel_task(task_id: str, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.status != "PENDING":
+        raise HTTPException(status_code=400, detail="Only PENDING tasks can be cancelled")
+    
+    task.status = "CANCELLED"
+    db.commit()
+    db.refresh(task)
+    return {"message": "Task cancelled", "task_id": task.id}

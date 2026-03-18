@@ -4,7 +4,7 @@ def handle_send_email(payload: dict) -> dict:
     to = payload.get("to", "unknown")
     subject = payload.get("subject", "no subject")
     print(f"  Sending email to {to} — subject: {subject}")
-    time.sleep(1)
+    time.sleep(5)
     return {"sent_to": to, "subject": subject, "status": "delivered"}
 
 def handle_generate_report(payload: dict) -> dict:

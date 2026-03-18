@@ -207,6 +207,11 @@
       color: #e74c3c;
     }
 
+    .badge.CANCELLED {
+      background: #1e1e1e;
+      color: #888;
+    }
+
     .badge.ACTIVE {
       background: #1a0d2e;
       color: #9b59b6;
@@ -400,11 +405,17 @@
     <div class="section-header">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="margin-right:8px;">Tasks</span>
+        <input id="search-input" placeholder="Search by type or ID..." oninput="handleSearch()" style="
+    background:#0f0f1a;border:1px solid #2a2a3e;color:#e0e0e0;
+    padding:4px 12px;border-radius:6px;font-size:13px;width:220px;
+  " />
+ 
         <button onclick="setFilter('ALL')" id="filter-ALL" class="filter-btn active-filter">All</button>
         <button onclick="setFilter('PENDING')" id="filter-PENDING" class="filter-btn">Pending</button>
         <button onclick="setFilter('RUNNING')" id="filter-RUNNING" class="filter-btn">Running</button>
         <button onclick="setFilter('COMPLETED')" id="filter-COMPLETED" class="filter-btn">Completed</button>
         <button onclick="setFilter('FAILED')" id="filter-FAILED" class="filter-btn">Failed</button>
+        <button onclick="setFilter('CANCELLED')" id="filter-CANCELLED" class="filter-btn">Cancelled</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <button onclick="changePage(-1)" id="btn-prev" style="
@@ -454,6 +465,7 @@
   <script>
     const API = "http://127.0.0.1:8000";
     const WS = "ws://127.0.0.1:8000/ws";
+    let searchQuery = '';
     async function retryTask(taskId) {
       try {
         const res = await fetch(`${API}/tasks/${taskId}/retry`, {
@@ -466,6 +478,11 @@
       } catch (e) {
         console.error("Retry failed", e);
       }
+    }
+    function handleSearch() {
+      searchQuery = document.getElementById("search-input").value.trim().toLowerCase();
+      currentPage = 1;
+      renderTasksPage();
     }
 
     async function fetchStats() {
@@ -483,6 +500,7 @@
     const PAGE_SIZE = 20;
     let allTasks = [];
     function setFilter(filter) {
+      let searchQuery = '';
       currentFilter = filter;
       currentPage = 1;
 
@@ -503,10 +521,13 @@
 
     function renderTasksPage() {
       const tbody = document.getElementById("tasks-table");
-      const filtered = currentFilter === 'ALL'
-        ? allTasks
-        : allTasks.filter(t => t.status === currentFilter);
-
+      const filtered = allTasks.filter(t => {
+        const matchesFilter = currentFilter === 'ALL' || t.status === currentFilter;
+        const matchesSearch = !searchQuery ||
+          t.type.toLowerCase().includes(searchQuery) ||
+          t.id.toLowerCase().includes(searchQuery);
+        return matchesFilter && matchesSearch;
+      });
       const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
       if (currentPage > totalPages) currentPage = totalPages;
@@ -537,17 +558,23 @@
         padding:3px 10px;border-radius:6px;cursor:pointer;font-size:12px;
       ">Retry</button>`
           : '';
+        const cancelBtn = t.status === 'PENDING'
+          ? `<button onclick="cancelTask('${t.id}')" style="
+      background:transparent;border:1px solid #888;color:#888;
+      padding:3px 10px;border-radius:6px;cursor:pointer;font-size:12px;
+    ">Cancel</button>`
+          : '';
 
         return `<tr>
-    <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
-    <td>${t.type}</td>
-    <td><span class="badge ${t.status}">${t.status}</span></td>
-    <td>${t.priority}</td>
-    <td>${t.retry_count}/${t.max_retries}</td>
-    <td>${created}</td>
-    <td>${duration}</td>
-    <td>${retryBtn}</td>
-  </tr>`;
+  <td style="font-family:monospace;font-size:12px;color:#555">${t.id.substring(0, 8)}...</td>
+  <td>${t.type}</td>
+  <td><span class="badge ${t.status}">${t.status}</span></td>
+  <td>${t.priority}</td>
+  <td>${t.retry_count}/${t.max_retries}</td>
+  <td>${created}</td>
+  <td>${duration}</td>
+  <td>${retryBtn}${cancelBtn}</td>
+</tr>`;
       }).join("");
     }
 
@@ -688,6 +715,19 @@
         feedback.textContent = "Server error.";
       }
     }
+    async function cancelTask(taskId) {
+  try {
+    const res = await fetch(`${API}/tasks/${taskId}/cancel`, {
+      method: "POST"
+    });
+    if (res.ok) {
+      await fetchTasks();
+      await fetchStats();
+    }
+  } catch (e) {
+    console.error("Cancel failed", e);
+  }
+}
   </script>
 
 </body>
